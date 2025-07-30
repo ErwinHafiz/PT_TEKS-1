@@ -3,6 +3,7 @@ import string
 import os
 import re
 import PyPDF2
+import nltk
 from nltk.tokenize import sent_tokenize, word_tokenize
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 from nltk.corpus import stopwords
@@ -14,6 +15,18 @@ import matplotlib.pyplot as plt
 from rouge_score import rouge_scorer
 import pandas as pd
 
+# ===============================
+# FUNGSI SETUP UNTUK DEPLOYMENT 
+# ===============================
+@st.cache_resource
+def setup_nltk_data():
+    nltk.download('punkt', quiet=True)
+    nltk.download('stopwords', quiet=True)
+    return True
+
+# Panggil fungsi setup saat aplikasi dijalankan
+setup_nltk_data()
+
 # Konfigurasi halaman Streamlit
 st.set_page_config(
     page_title="Peringkasan Teks Otomatis dengan TextRank",
@@ -23,12 +36,6 @@ st.set_page_config(
 # Judul Aplikasi
 st.title("Peringkasan Teks Otomatis Putusan Pengadilan")
 st.markdown("Aplikasi demo untuk meringkas dokumen PDF berbahasa Indonesia menggunakan algoritma TextRank.")
-
-# Folder untuk menyimpan file PDF
-pdf_folder = 'pdf_folder'
-if not os.path.exists(pdf_folder):
-    st.error(f"Folder '{pdf_folder}' tidak ditemukan. Silakan buat folder ini dan tambahkan file PDF.")
-    st.stop()
 
 # =========================================================
 # FUNGSI-FUNGSI UTAMA (DI-CACHE UNTUK EFISIENSI)
@@ -65,7 +72,6 @@ def normalize_abbreviations(text):
 @st.cache_data
 def clean_text_and_segment(text):
     """Pembersihan awal dan segmentasi kalimat."""
-    # Daftar regex untuk membersihkan watermark, header, footer, dan simbol berulang
     watermark_phrases = [
         r'Mahkamah\s+Agung\s+Republik\s+Indonesia',
         r'Mahkamah\s+Agung',
@@ -74,9 +80,9 @@ def clean_text_and_segment(text):
         r'Direktori Putusan Mahkamah Agung Republik Indonesia',
         r'putusan\s+mahkamah\s+agung\.go\.id',
         r'demi keadilan berdasarkan ketuhanan yang maha esa',
-        r'-{2,}', # Menghapus 2 atau lebih tanda hubung
-        r'\_+', # Menghapus 1 atau lebih garis bawah
-        r'\n' # Hapus baris baru
+        r'-{2,}',
+        r'\_+',
+        r'\n'
     ]
     for phrase in watermark_phrases:
         text = re.sub(phrase, ' ', text, flags=re.IGNORECASE)
