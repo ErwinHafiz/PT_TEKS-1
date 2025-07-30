@@ -1,0 +1,10 @@
+streamlit
+PyPDF2
+nltk
+Sastrawi
+scikit-learn
+networkx
+numpy
+matplotlib
+rouge-score
+pandas
