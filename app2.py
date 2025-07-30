@@ -14,9 +14,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from rouge_score import rouge_scorer
 import pandas as pd
+import seaborn as sns
 
 # ===============================
-# FUNGSI SETUP UNTUK DEPLOYMENT 
+# FUNGSI SETUP UNTUK DEPLOYMENT 
 # ===============================
 @st.cache_resource
 def setup_nltk_data():
@@ -24,7 +25,6 @@ def setup_nltk_data():
     nltk.download('stopwords', quiet=True)
     return True
 
-# Panggil fungsi setup saat aplikasi dijalankan
 setup_nltk_data()
 
 # Konfigurasi halaman Streamlit
@@ -33,7 +33,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# Judul Aplikasi
 st.title("Peringkasan Teks Otomatis Putusan Pengadilan")
 st.markdown("Aplikasi demo untuk meringkas dokumen PDF berbahasa Indonesia menggunakan algoritma TextRank.")
 
@@ -43,7 +42,6 @@ st.markdown("Aplikasi demo untuk meringkas dokumen PDF berbahasa Indonesia mengg
 
 @st.cache_data
 def read_pdf(uploaded_file):
-    """Membaca teks dari file PDF yang diunggah."""
     text = ""
     try:
         with uploaded_file as file:
@@ -56,7 +54,6 @@ def read_pdf(uploaded_file):
 
 @st.cache_data
 def read_txt(uploaded_file):
-    """Membaca teks dari file TXT yang diunggah."""
     try:
         return uploaded_file.read().decode("utf-8")
     except Exception as e:
@@ -65,13 +62,11 @@ def read_txt(uploaded_file):
 
 @st.cache_data
 def normalize_abbreviations(text):
-    """Normalisasi singkatan agar titik tidak memecah kalimat."""
     text = re.sub(r'([a-zA-Z])\.', r'\1<DOT>', text)
     return text
 
 @st.cache_data
 def clean_text_and_segment(text):
-    """Pembersihan awal dan segmentasi kalimat."""
     watermark_phrases = [
         r'Mahkamah\s+Agung\s+Republik\s+Indonesia',
         r'Mahkamah\s+Agung',
@@ -98,7 +93,6 @@ def clean_text_and_segment(text):
 
 @st.cache_data
 def process_sentences(sentences):
-    """Fungsi untuk tokenisasi, stemming, dan stopwords removal."""
     stemmer = StemmerFactory().create_stemmer()
     indo_stopwords = set(stopwords.words('indonesian'))
     
@@ -118,14 +112,13 @@ def process_sentences(sentences):
 
 @st.cache_data
 def calculate_tfidf(processed_sentences):
-    """Menghitung TF-IDF dan representasi vektor."""
     tfidf_vectorizer = TfidfVectorizer(ngram_range=(1, 2))
     tfidf_matrix = tfidf_vectorizer.fit_transform(processed_sentences)
-    return tfidf_matrix
+    feature_names = tfidf_vectorizer.get_feature_names_out()
+    return tfidf_matrix, feature_names
 
 @st.cache_data
 def textrank_algorithm(similarity_matrix):
-    """Mengimplementasikan algoritma TextRank."""
     n_sentences = similarity_matrix.shape[0]
     graph = nx.Graph()
     graph.add_nodes_from(range(n_sentences))
@@ -154,14 +147,10 @@ def textrank_algorithm(similarity_matrix):
         st.error(f"Error saat menjalankan TextRank: {e}. Menggunakan bobot yang sama.")
         pagerank_scores = {i: 1.0/n_sentences for i in range(n_sentences)}
 
-    return pagerank_scores
+    return pagerank_scores, graph
 
 @st.cache_data
 def calculate_rouge_scores(summary, reference_summary):
-    """
-    Fungsi untuk menghitung ROUGE dengan membandingkan ringkasan
-    aplikasi dengan ringkasan referensi manual.
-    """
     scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
 
     def normalize_text(text):
@@ -218,7 +207,7 @@ if uploaded_pdf and summarize_button:
             st.error("Tidak ada kalimat yang valid setelah preprocessing. Coba dokumen lain atau sesuaikan filter.")
             st.stop()
 
-        tfidf_matrix = calculate_tfidf(processed_sentences)
+        tfidf_matrix, feature_names = calculate_tfidf(processed_sentences)
         
         if tfidf_matrix.shape[0] == 0 or tfidf_matrix.shape[1] == 0:
             st.error("Tidak ada fitur TF-IDF yang dihasilkan. Coba dokumen lain atau sesuaikan preprocessing.")
@@ -226,7 +215,7 @@ if uploaded_pdf and summarize_button:
 
         similarity_matrix = cosine_similarity(tfidf_matrix)
 
-        pagerank_scores = textrank_algorithm(similarity_matrix)
+        pagerank_scores, graph = textrank_algorithm(similarity_matrix)
         
         if not pagerank_scores:
             st.error("TextRank tidak dapat menghitung skor. Coba dokumen lain.")
@@ -267,7 +256,6 @@ if uploaded_pdf and summarize_button:
         original_text,
         height=300
     )
-
 
     if uploaded_reference_txt:
         reference_summary_text = read_txt(uploaded_reference_txt)
@@ -314,7 +302,51 @@ if uploaded_pdf and summarize_button:
 
 
     with st.expander("Lihat Detail Dokumen & Proses"):
-        st.subheader("Kalimat Asli Setelah Segmentasi")
+        st.subheader("Visualisasi Kata Kunci (TF-IDF)")
+        if len(feature_names) > 0:
+            feature_scores = np.asarray(tfidf_matrix.sum(axis=0)).flatten()
+            top_features_idx = feature_scores.argsort()[-20:][::-1]
+            top_features_scores = feature_scores[top_features_idx]
+            top_features_names = [feature_names[idx] for idx in top_features_idx]
+            
+            fig_tfidf, ax_tfidf = plt.subplots(figsize=(10, 8))
+            ax_tfidf.barh(range(len(top_features_names)), top_features_scores, color='skyblue')
+            ax_tfidf.set_yticks(range(len(top_features_names)))
+            ax_tfidf.set_yticklabels(top_features_names)
+            ax_tfidf.set_xlabel("Skor TF-IDF")
+            ax_tfidf.set_title("20 Kata Kunci Teratas Berdasarkan TF-IDF")
+            ax_tfidf.invert_yaxis()
+            fig_tfidf.tight_layout()
+            st.pyplot(fig_tfidf)
+        else:
+            st.info("Tidak ada fitur TF-IDF untuk divisualisasikan.")
+        
+        st.subheader("Visualisasi Matriks Kemiripan (Cosine Similarity)")
+        if similarity_matrix.size > 0 and len(sentences) > 1:
+            fig_sim, ax_sim = plt.subplots(figsize=(10, 8))
+            sns.heatmap(similarity_matrix, cmap='viridis', ax=ax_sim)
+            ax_sim.set_title("Heatmap Matriks Kemiripan Antar Kalimat")
+            ax_sim.set_xlabel("Indeks Kalimat")
+            ax_sim.set_ylabel("Indeks Kalimat")
+            st.pyplot(fig_sim)
+        else:
+            st.info("Tidak ada matriks kemiripan untuk divisualisasikan.")
+
+        st.subheader("Visualisasi Graf TextRank")
+        if graph.number_of_nodes() > 0 and graph.number_of_edges() > 0:
+            fig_graph, ax_graph = plt.subplots(figsize=(12, 10))
+            node_sizes = [v * 50000 for v in pagerank_scores.values()]
+            pos = nx.spring_layout(graph, k=0.5, iterations=50)
+            nx.draw_networkx_nodes(graph, pos, node_size=node_sizes, node_color='skyblue', ax=ax_graph)
+            nx.draw_networkx_edges(graph, pos, width=1.0, alpha=0.5, ax=ax_graph)
+            nx.draw_networkx_labels(graph, pos, font_size=8, font_color='black', ax=ax_graph)
+            ax_graph.set_title("Graf Kalimat Berdasarkan Skor TextRank")
+            ax_graph.axis('off')
+            st.pyplot(fig_graph)
+        else:
+            st.info("Graf tidak dapat divisualisasikan. Mungkin dokumen terlalu pendek.")
+
+        st.subheader("Urutan Kalimat Setelah Preprocessing")
         for i, s in enumerate(sentences):
             st.text(f"{i+1}. {s}")
         
