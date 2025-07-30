@@ -16,18 +16,16 @@ from rouge_score import rouge_scorer
 import pandas as pd
 import seaborn as sns
 
-# =========================================================
-# FUNGSI SETUP NLTK DATA UNTUK DEPLOYMENT 
-# =========================================================
-# NLTK 
-try:
-    nltk.data.find('tokenizers/punkt')
-    nltk.data.find('corpora/stopwords')
-except nltk.downloader.DownloadError:
-    with st.spinner("Mengunduh NLTK data..."):
-        nltk.download('punkt', quiet=True)
-        nltk.download('stopwords', quiet=True)
-        st.success("NLTK data berhasil diunduh!")
+# ===============================
+# FUNGSI SETUP UNTUK DEPLOYMENT 
+# ===============================
+@st.cache_resource
+def setup_nltk_data():
+    nltk.download('punkt', quiet=True)
+    nltk.download('stopwords', quiet=True)
+    return True
+
+setup_nltk_data()
 
 # Konfigurasi halaman Streamlit
 st.set_page_config(
@@ -277,7 +275,7 @@ if uploaded_pdf and summarize_button:
 
                 metrics_list = ['rouge1', 'rouge2', 'rougeL']
                 precision_scores = [rouge_results[m].precision for m in metrics_list]
-                recall_scores = [rouge_results[m].lower()].recall for m in metrics_list]
+                recall_scores = [rouge_results[m].recall for m in metrics_list] # Baris yang diperbaiki
                 f1_scores = [rouge_results[m].fmeasure for m in metrics_list]
                 
                 fig, ax = plt.subplots(figsize=(10, 5))
