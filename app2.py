@@ -77,7 +77,7 @@ def clean_text_and_segment(text):
         r'demi keadilan berdasarkan ketuhanan yang maha esa',
         r'-{2,}',
         r'\_+',
-        r'Halaman \d+ dari \d+' # Pindahkan ini ke sini agar tidak memecah kalimat
+        r'Halaman \d+ dari \d+'
     ]
     
     # Hapus baris baru dan ganti dengan spasi
@@ -86,7 +86,7 @@ def clean_text_and_segment(text):
     for phrase in watermark_phrases:
         text = re.sub(phrase, ' ', text, flags=re.IGNORECASE)
 
-    # Tambahkan titik di akhir setiap item bernomor untuk membantu segmentasi
+    # Tambahkan titik di akhir setiap item bernomor untuk help segmentasi
     text = re.sub(r'(\d\.)\s', r'\1 ', text)
     
     text = normalize_abbreviations(text)
