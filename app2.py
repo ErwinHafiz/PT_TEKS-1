@@ -16,19 +16,13 @@ from rouge_score import rouge_scorer
 import pandas as pd
 import seaborn as sns
 
-# =========================================================
-# FUNGSI SETUP NLTK DATA UNTUK DEPLOYMENT (LEBIH ROBUST)
-# =========================================================
+# ===============================
+# FUNGSI SETUP UNTUK DEPLOYMENT 
+# ===============================
 @st.cache_resource
 def setup_nltk_data():
-    try:
-        nltk.data.find('tokenizers/punkt')
-        nltk.data.find('corpora/stopwords')
-    except nltk.downloader.DownloadError:
-        with st.spinner("Mengunduh NLTK data..."):
-            nltk.download('punkt')
-            nltk.download('stopwords')
-            st.success("NLTK data berhasil diunduh!")
+    nltk.download('punkt', quiet=True)
+    nltk.download('stopwords', quiet=True)
     return True
 
 setup_nltk_data()
@@ -308,7 +302,9 @@ if uploaded_pdf and summarize_button:
 
 
     with st.expander("Lihat Detail Dokumen & Proses"):
+        # --- Visualisasi TF-IDF ---
         st.subheader("Visualisasi Kata Kunci (TF-IDF)")
+        # Perbaikan di sini
         if len(feature_names) > 0:
             feature_scores = np.asarray(tfidf_matrix.sum(axis=0)).flatten()
             top_features_idx = feature_scores.argsort()[-20:][::-1]
@@ -321,12 +317,12 @@ if uploaded_pdf and summarize_button:
             ax_tfidf.set_yticklabels(top_features_names)
             ax_tfidf.set_xlabel("Skor TF-IDF")
             ax_tfidf.set_title("20 Kata Kunci Teratas Berdasarkan TF-IDF")
-            ax_tfidf.invert_yaxis()
             fig_tfidf.tight_layout()
             st.pyplot(fig_tfidf)
         else:
             st.info("Tidak ada fitur TF-IDF untuk divisualisasikan.")
         
+        # --- Visualisasi Matriks Kemiripan ---
         st.subheader("Visualisasi Matriks Kemiripan (Cosine Similarity)")
         if similarity_matrix.size > 0 and len(sentences) > 1:
             fig_sim, ax_sim = plt.subplots(figsize=(10, 8))
@@ -338,6 +334,7 @@ if uploaded_pdf and summarize_button:
         else:
             st.info("Tidak ada matriks kemiripan untuk divisualisasikan.")
 
+        # --- Visualisasi Graf TextRank ---
         st.subheader("Visualisasi Graf TextRank")
         if graph.number_of_nodes() > 0 and graph.number_of_edges() > 0:
             fig_graph, ax_graph = plt.subplots(figsize=(12, 10))
