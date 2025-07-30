@@ -19,7 +19,7 @@ import seaborn as sns
 # =========================================================
 # FUNGSI SETUP NLTK DATA UNTUK DEPLOYMENT 
 # =========================================================
-# NLTK punkt dll:
+# NLTK 
 try:
     nltk.data.find('tokenizers/punkt')
     nltk.data.find('corpora/stopwords')
