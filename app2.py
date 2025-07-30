@@ -16,16 +16,18 @@ from rouge_score import rouge_scorer
 import pandas as pd
 import seaborn as sns
 
-# ===============================
-# FUNGSI SETUP UNTUK DEPLOYMENT 
-# ===============================
-@st.cache_resource
-def setup_nltk_data():
-    nltk.download('punkt', quiet=True)
-    nltk.download('stopwords', quiet=True)
-    return True
-
-setup_nltk_data()
+# =========================================================
+# FUNGSI SETUP NLTK DATA UNTUK DEPLOYMENT 
+# =========================================================
+# NLTK punkt dll:
+try:
+    nltk.data.find('tokenizers/punkt')
+    nltk.data.find('corpora/stopwords')
+except nltk.downloader.DownloadError:
+    with st.spinner("Mengunduh NLTK data..."):
+        nltk.download('punkt', quiet=True)
+        nltk.download('stopwords', quiet=True)
+        st.success("NLTK data berhasil diunduh!")
 
 # Konfigurasi halaman Streamlit
 st.set_page_config(
@@ -77,18 +79,11 @@ def clean_text_and_segment(text):
         r'demi keadilan berdasarkan ketuhanan yang maha esa',
         r'-{2,}',
         r'\_+',
-        r'Halaman \d+ dari \d+'
+        r'\n'
     ]
-    
-    # Hapus baris baru dan ganti dengan spasi
-    text = re.sub(r'\n', ' ', text)
-    
     for phrase in watermark_phrases:
         text = re.sub(phrase, ' ', text, flags=re.IGNORECASE)
 
-    # Tambahkan titik di akhir setiap item bernomor untuk help segmentasi
-    text = re.sub(r'(\d\.)\s', r'\1 ', text)
-    
     text = normalize_abbreviations(text)
     sentences = sent_tokenize(text)
     
@@ -282,7 +277,7 @@ if uploaded_pdf and summarize_button:
 
                 metrics_list = ['rouge1', 'rouge2', 'rougeL']
                 precision_scores = [rouge_results[m].precision for m in metrics_list]
-                recall_scores = [rouge_results[m].recall for m in metrics_list]
+                recall_scores = [rouge_results[m].lower()].recall for m in metrics_list]
                 f1_scores = [rouge_results[m].fmeasure for m in metrics_list]
                 
                 fig, ax = plt.subplots(figsize=(10, 5))
