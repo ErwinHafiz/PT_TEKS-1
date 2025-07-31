@@ -19,21 +19,15 @@ import seaborn as sns
 # =========================================================
 # FUNGSI SETUP NLTK DATA UNTUK DEPLOYMENT (PALING ROBUST)
 # =========================================================
-
 @st.cache_resource
 def setup_nltk_data():
-    nltk_data_path = "nltk_data"
-    os.makedirs(nltk_data_path, exist_ok=True)
-    nltk.data.path.append(nltk_data_path)
-
     try:
         nltk.data.find('tokenizers/punkt')
         nltk.data.find('corpora/stopwords')
-        st.info("NLTK data sudah terunduh.")
     except nltk.downloader.DownloadError:
         with st.spinner("Mengunduh NLTK data..."):
-            nltk.download('punkt', download_dir=nltk_data_path)
-            nltk.download('stopwords', download_dir=nltk_data_path)
+            nltk.download('punkt', quiet=True)
+            nltk.download('stopwords', quiet=True)
             st.success("NLTK data berhasil diunduh!")
     return True
 
@@ -89,14 +83,13 @@ def clean_text_and_segment(text):
         r'demi keadilan berdasarkan ketuhanan yang maha esa',
         r'-{2,}',
         r'\_+',
-        r'\n'
+        # Hapus r'\n' dari daftar ini untuk memperbaiki segmentasi
     ]
     for phrase in watermark_phrases:
         text = re.sub(phrase, ' ', text, flags=re.IGNORECASE)
 
     text = normalize_abbreviations(text)
-    
-    sentences = sent_tokenize(text, language='indonesian')
+    sentences = sent_tokenize(text)
     
     sentences = [re.sub(r'<DOT>', '.', s) for s in sentences]
     sentences = [re.sub(r'\s+', ' ', s).strip() for s in sentences]
@@ -223,7 +216,7 @@ if uploaded_pdf and summarize_button:
         tfidf_matrix, feature_names = calculate_tfidf(processed_sentences)
         
         if tfidf_matrix.shape[0] == 0 or tfidf_matrix.shape[1] == 0:
-            st.error("Tidak ada fitur TF-IDF yang dihasilkan. Coba dokumen lain atau sesuaikan preprocessing.")
+            st.error("Tidak ada fitur TF-IDF untuk divisualisasikan.")
             st.stop()
 
         similarity_matrix = cosine_similarity(tfidf_matrix)
