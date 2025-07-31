@@ -22,8 +22,10 @@ import seaborn as sns
 @st.cache_resource
 def setup_nltk_data():
     try:
+        # Cek ketersediaan data NLTK
         nltk.data.find('tokenizers/punkt')
         nltk.data.find('corpora/stopwords')
+        st.info("NLTK data sudah terunduh.")
     except nltk.downloader.DownloadError:
         with st.spinner("Mengunduh NLTK data..."):
             nltk.download('punkt', quiet=True)
@@ -83,13 +85,14 @@ def clean_text_and_segment(text):
         r'demi keadilan berdasarkan ketuhanan yang maha esa',
         r'-{2,}',
         r'\_+',
-        # Hapus r'\n' dari daftar ini untuk memperbaiki segmentasi
+        r'\n'
     ]
     for phrase in watermark_phrases:
         text = re.sub(phrase, ' ', text, flags=re.IGNORECASE)
 
     text = normalize_abbreviations(text)
-    sentences = sent_tokenize(text)
+    
+    sentences = sent_tokenize(text, language='indonesian')
     
     sentences = [re.sub(r'<DOT>', '.', s) for s in sentences]
     sentences = [re.sub(r'\s+', ' ', s).strip() for s in sentences]
