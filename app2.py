@@ -19,18 +19,21 @@ import seaborn as sns
 # =========================================================
 # FUNGSI SETUP NLTK DATA UNTUK DEPLOYMENT (PALING ROBUST)
 # =========================================================
+
 @st.cache_resource
 def setup_nltk_data():
+    nltk_data_path = "nltk_data"
+    os.makedirs(nltk_data_path, exist_ok=True)
+    nltk.data.path.append(nltk_data_path)
+
     try:
-        # Cek ketersediaan data NLTK
         nltk.data.find('tokenizers/punkt')
         nltk.data.find('corpora/stopwords')
         st.info("NLTK data sudah terunduh.")
     except nltk.downloader.DownloadError:
         with st.spinner("Mengunduh NLTK data..."):
-            # Unduh data yang diperlukan, termasuk 'punkt' yang lebih spesifik
-            nltk.download('punkt', quiet=True)
-            nltk.download('stopwords', quiet=True)
+            nltk.download('punkt', download_dir=nltk_data_path)
+            nltk.download('stopwords', download_dir=nltk_data_path)
             st.success("NLTK data berhasil diunduh!")
     return True
 
@@ -93,7 +96,6 @@ def clean_text_and_segment(text):
 
     text = normalize_abbreviations(text)
     
-    # PERBAIKAN UTAMA: Mengatur bahasa menjadi 'indonesian' saat tokenisasi kalimat
     sentences = sent_tokenize(text, language='indonesian')
     
     sentences = [re.sub(r'<DOT>', '.', s) for s in sentences]
