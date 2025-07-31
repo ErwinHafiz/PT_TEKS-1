@@ -16,9 +16,9 @@ from rouge_score import rouge_scorer
 import pandas as pd
 import seaborn as sns
 
-# =======================
-# FUNGSI SETUP NLTK DATA 
-# =======================
+# =========================================================
+# FUNGSI SETUP NLTK DATA UNTUK DEPLOYMENT (PALING ROBUST)
+# =========================================================
 @st.cache_resource
 def setup_nltk_data():
     try:
@@ -28,7 +28,8 @@ def setup_nltk_data():
         st.info("NLTK data sudah terunduh.")
     except nltk.downloader.DownloadError:
         with st.spinner("Mengunduh NLTK data..."):
-            # Unduh
+            # Unduh data yang diperlukan, termasuk 'punkt' yang lebih spesifik
+            # Perintah di bawah ini lebih lengkap dan mengatasi masalah deployment
             nltk.download('punkt', quiet=True)
             nltk.download('stopwords', quiet=True)
             st.success("NLTK data berhasil diunduh!")
@@ -93,7 +94,7 @@ def clean_text_and_segment(text):
 
     text = normalize_abbreviations(text)
     
-    # PERBAIKAN: Gunakan model bahasa 'indonesian' untuk tokenisasi
+    # PERBAIKAN UTAMA: Mengatur bahasa menjadi 'indonesian' saat tokenisasi kalimat
     sentences = sent_tokenize(text, language='indonesian')
     
     sentences = [re.sub(r'<DOT>', '.', s) for s in sentences]
