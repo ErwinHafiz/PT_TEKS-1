@@ -16,25 +16,19 @@ from rouge_score import rouge_scorer
 import pandas as pd
 import seaborn as sns
 
-# =========================================================
-# FUNGSI SETUP NLTK DATA UNTUK DEPLOYMENT (PALING ROBUST)
-# =========================================================
+# =======================
+# FUNGSI SETUP NLTK DATA 
+# =======================
 @st.cache_resource
 def setup_nltk_data():
-    nltk_data_path = "nltk_data"
-    os.makedirs(nltk_data_path, exist_ok=True)
-    
-    # Tambahkan path ke NLTK
-    if nltk_data_path not in nltk.data.path:
-        nltk.data.path.append(nltk_data_path)
-
-    # Cek dan unduh data jika belum ada
     try:
+        # Cek ketersediaan data NLTK
         nltk.data.find('tokenizers/punkt')
         nltk.data.find('corpora/stopwords')
         st.info("NLTK data sudah terunduh.")
     except nltk.downloader.DownloadError:
         with st.spinner("Mengunduh NLTK data..."):
+            # Unduh
             nltk.download('punkt', quiet=True)
             nltk.download('stopwords', quiet=True)
             st.success("NLTK data berhasil diunduh!")
@@ -98,7 +92,9 @@ def clean_text_and_segment(text):
         text = re.sub(phrase, ' ', text, flags=re.IGNORECASE)
 
     text = normalize_abbreviations(text)
-    sentences = sent_tokenize(text)
+    
+    # PERBAIKAN: Gunakan model bahasa 'indonesian' untuk tokenisasi
+    sentences = sent_tokenize(text, language='indonesian')
     
     sentences = [re.sub(r'<DOT>', '.', s) for s in sentences]
     sentences = [re.sub(r'\s+', ' ', s).strip() for s in sentences]
