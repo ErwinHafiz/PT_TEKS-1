@@ -29,7 +29,6 @@ def setup_nltk_data():
     except nltk.downloader.DownloadError:
         with st.spinner("Mengunduh NLTK data..."):
             # Unduh data yang diperlukan, termasuk 'punkt' yang lebih spesifik
-            # Perintah di bawah ini lebih lengkap dan mengatasi masalah deployment
             nltk.download('punkt', quiet=True)
             nltk.download('stopwords', quiet=True)
             st.success("NLTK data berhasil diunduh!")
